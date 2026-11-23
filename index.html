@@ -74,6 +74,14 @@ input.ans{width:100%;font-size:1.1rem;padding:11px;border-radius:12px;border:2px
 @keyframes pp{50%{transform:scale(1.04)}}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:9}
 .hidden{display:none}
+
+.lw{cursor:pointer;border-radius:4px;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;border-bottom:1px dotted rgba(90,46,166,.35)}
+.lw.on{background:#efe6ff}
+#tip{position:absolute;display:none;z-index:20;max-width:280px;background:#1d1b2e;color:#fff;font-size:.86rem;line-height:1.35;padding:7px 10px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.25);font-style:normal}
+#tip:after{content:"";position:absolute;left:var(--ax,50%);bottom:-6px;transform:translateX(-50%);border:6px solid transparent;border-bottom:0;border-top-color:#1d1b2e}
+#tip.below:after{bottom:auto;top:-6px;border-top:0;border-bottom:6px solid #1d1b2e}
+#tip .tw b{color:#d9c8ff}
+#tip .tp{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.18);color:#ffe9a8}
 </style>
 </head>
 <body>
@@ -101,6 +109,7 @@ input.ans{width:100%;font-size:1.1rem;padding:11px;border-radius:12px;border:2px
 <section id="learn">
   <div class="small">Dein Fortschritt: <span id="pTxt">0/8</span> Kapitel gelernt</div>
   <div class="prog"><div id="pBar"></div></div>
+  <div class="small" style="margin-bottom:4px">💡 Tipp: Tippe auf ein <span style="color:#5a2ea6;font-style:italic;border-bottom:1px dotted">lateinisches Wort</span>, dann siehst du die Bedeutung + die Übersetzung der Phrase.</div>
 
   <details class="unit" data-id="plan">
     <summary><span class="ico" style="background:#efeaff">🎯</span>1 · Dein Game-Plan<span class="done-badge">offen</span></summary>
@@ -378,7 +387,7 @@ function hud(){sXP.textContent=xp;sStreak.textContent=streak;sLvl.textContent=lv
 function show(id){['qMenu','qPlay','qEnd'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id))}
 function toMenu(){show('qMenu');hud()}
 function startQuiz(cat){mode('quiz');const qs=build(cat);if(!qs.length){alert('Keine Fehler gespeichert, stark! 💪');toMenu();return}cur={cat,qs,i:0,right:0,lives:cat==='mix'?5:3,max:cat==='mix'?5:3};streak=0;show('qPlay');render()}
-function render(){const q=cur.qs[cur.i];qNum.textContent=`Frage ${cur.i+1}/${cur.qs.length}`;qLives.textContent='❤️'.repeat(cur.lives)+'🖤'.repeat(cur.max-cur.lives);qBar.style.width=(cur.i/cur.qs.length*100)+'%';qTag.textContent=q.tag;qText.innerHTML=q.text;qFb.className='fb';qNext.classList.add('hidden');
+function render(){const q=cur.qs[cur.i];qNum.textContent=`Frage ${cur.i+1}/${cur.qs.length}`;qLives.textContent='❤️'.repeat(cur.lives)+'🖤'.repeat(cur.max-cur.lives);qBar.style.width=(cur.i/cur.qs.length*100)+'%';qTag.textContent=q.tag;qText.innerHTML=q.text;wrapLat(qText);hideTip();qFb.className='fb';qNext.classList.add('hidden');
   if(q.type==='mc'){qBody.innerHTML='<div class="opts">'+q.opts.map((o,k)=>`<button class="opt" data-k="${k}">${o}</button>`).join('')+'</div>';qBody.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(b.textContent,b))}
   else{qBody.innerHTML='<input class="ans" id="ansIn" placeholder="klassische Form eintippen …" autocomplete="off" autocapitalize="off"><div class="row"><button class="btn" id="ansBtn">Prüfen</button></div>';const inp=document.getElementById('ansIn');inp.focus();const go=()=>answer(inp.value,null);ansBtn.onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()}}}
 function norm(s){return s.toLowerCase().trim().replace(/[āēīōū]/g,c=>({ā:'a',ē:'e',ī:'i',ō:'o',ū:'u'}[c]))}
@@ -387,7 +396,7 @@ function answer(val,btn){const q=cur.qs[cur.i];if(!qNext.classList.contains('hid
   let mist=store.get('mist',[]);const key=q.text;
   if(ok){cur.right++;streak++;const gain=10+Math.min(streak,10)*2;xp+=gain;qFb.className='fb show r';qFb.innerHTML=`<b>${pick(['Optime! 🔥','Bene! ✨','Sallust wäre stolz 🏛️','Glatt richtig 💯','Ave, Champion 👑'])}</b> +${gain} XP<br>${q.exp}`;qCard.classList.remove('pop');void qCard.offsetWidth;qCard.classList.add('pop');if(streak%5===0)confetti(80);mist=mist.filter(m=>m.text!==key)}
   else{streak=0;cur.lives--;qFb.className='fb show w';qFb.innerHTML=`<b>${pick(['Knapp daneben 😅','Fast! 🫠','Nicht ganz 👀'])}</b> Richtig: <b>${q.ans}</b><br>${q.exp}`;qCard.classList.remove('shake');void qCard.offsetWidth;qCard.classList.add('shake');if(!mist.some(m=>m.text===key))mist.push(q)}
-  store.set('mist',mist);store.set('xp',xp);hud();qNext.classList.remove('hidden');qNext.textContent=(cur.lives<=0||cur.i===cur.qs.length-1)?'Ergebnis 🏁':'Weiter ➜';qNext.focus()}
+  wrapLat(qFb);store.set('mist',mist);store.set('xp',xp);hud();qNext.classList.remove('hidden');qNext.textContent=(cur.lives<=0||cur.i===cur.qs.length-1)?'Ergebnis 🏁':'Weiter ➜';qNext.focus()}
 function next(){if(cur.lives<=0||cur.i===cur.qs.length-1)return end();cur.i++;render()}
 function end(){const n=cur.i+1,p=cur.right/cur.qs.length;if(cur.right>best){best=cur.right;store.set('best',best)}hud();show('qEnd');
   let e,t;if(cur.lives<=0){e='💀';t='Alle Leben weg!'}else if(p>=.9){e='👑';t='Imperator-Level!';confetti(200)}else if(p>=.7){e='🏆';t='Stark, das gibt Punkte!';confetti(120)}else if(p>=.55){e='💪';t='Note 3 ist drin!'}else{e='📚';t='Nochmal üben, du schaffst das!'}
@@ -414,6 +423,132 @@ function syncLoad(){let raw=syncIn.value.trim().replace(/\s+/g,'');if(!raw){sync
   const m=store.get('mist',[]);(d.mist||[]).forEach(q=>{if(!m.some(x=>x.text===q.text))m.push(q)});store.set('mist',m);
   renderDone();hud();syncIn.value='';syncMsg.textContent=`✅ Geladen! ${done.length} Kapitel, ${xp} XP, ${m.length} Fehler-Fragen.`;confetti(80)}
 
+// ---------- Tipp-Übersetzung (Wort + Phrase) ----------
+const W={a:'von, weg von',ab:'von … her, von',abstinentia:'Enthaltsamkeit',ac:'und',adpetebat:'er suchte zu gewinnen, strebte nach',adpetens:'gierig nach',adsequeretur:'er erreichte (Konj.)',adulescentium:'der jungen Männer',advorsa:'Widriges, Unglück',advorsus:'entgegengesetzt, widrig',aestumare:'einschätzen, beurteilen',aetate:'Alter (Abl.)',aeternaque:'und ewig',agrum:'den Acker',algoris:'der Kälte',alieni:'(nach) Fremdem',aliis:'den einen / den anderen',aliquis:'irgendjemand',aliud:'das eine / das andere',ambitione:'durch Ehrgeiz',amicitia:'Freundschaft',animi:'des Geistes',animus:'Geist, Sinn',artibus:'(mit) Mitteln, Praktiken',aspernabatur:'er wies zurück, verschmähte',atque:'und',audacia:'Frechheit, Kühnheit',audax:'kühn, frech',aut:'oder',auxit:'er vergrößerte',avaritia:'Habgier',bella:'Kriege',bellis:'(durch) Kriege',bello:'im Krieg',caedes:'Morde',caesar:'Caesar',caesari:'Caesar (Dat.)',canes:'Hunde',capiundae:'zu ergreifen(d)',capta:'erobert',carptim:'in Auswahl, stückweise',carthago:'Karthago',catervas:'Scharen',catilina:'Catilina',ceciderat:'war gefallen',civilis:'bürgerlich, unter Bürgern',clara:'glänzend, berühmt',clausum:'verschlossen',coepit:'begann',colundo:'durch Bebauen',conrupta:'verdorben',conscientia:'Bewusstsein, schlechtes Gewissen',contagio:'Ansteckung',corporis:'des Körpers',corrupta:'verdorben',corrupti:'verdorben',corruptus:'verdorben',crescere:'wachsen',crevit:'wuchs',culpa:'Schuld',cum:'mit / als, weil, obwohl',cupiditas:'Begierde',cupido:'Gier',deinde:'dann, danach',dicta:'Worte, das Gesagte',difficulter:'schwierig, mit Mühe',discesserunt:'zogen ab',discordia:'Zwietracht',dissimulator:'Verheimlicher',divitiaeque:'und Reichtum',divitiarum:'des Reichtums',divorsa:'verschieden, entgegengesetzt',divorsus:'verschieden',dominante:'herrschend (Abl.)',domiti:'bezwungen',dum:'solange / wenn nur',eloquentiae:'(an) Redegewandtheit',eo:'umso',esse:'sein',est:'ist',et:'und',ex:'aus, gemäß',exaequanda:'gleichzustellen(d)',existumo:'ich halte für, meine',explananda:'zu erklären(d)',facillumum:'sehr leicht',facinorum:'der Untaten, Verbrechen',facinus:'Tat, Untat',factis:'den Taten',familiaritas:'Vertrautheit, Freundschaft',familiaritates:'vertraute Freundschaften',fides:'Treue, Vertrauen',fidosque:'und treu',fidus:'treu',flagitiorum:'der Schandtaten',flagitium:'Schandtat',flagrabat:'brannte (vor Begierde)',fluxa:'vergänglich',forent:'wären',formae:'der Schönheit',fortuna:'Schicksal, Glück',fragilis:'zerbrechlich',fruimur:'wir genießen',fuere:'waren',fuit:'war',genere:'(aus) Geschlecht, Familie',gerendis:'zu führen(d)',gestae:'getan (res gestae = Taten)',gloria:'Ruhm',gloriae:'(auf) Ruhm',gloriam:'Ruhm (Akk.)',gratia:'wegen, um … willen',habendam:'zu führen(d), zu halten',habeo:'ich habe, halte für',habere:'haben, halten für',habetur:'gilt als',haec:'dies, diese Dinge',haud:'nicht',hostes:'die Feinde',id:'das, dies',imperi:'der Herrschaft',in:'in, an, auf',inediae:'des Hungers',ingeni:'des Geistes',ingenio:'Charakter, Wesen (Abl.)',inlecebris:'(durch) Verlockungen',inmutata:'verändert',interiit:'ging unter',intestina:'innere',iustissumo:'sehr gerecht',iustitia:'Gerechtigkeit',labore:'durch Arbeit',largitio:'Bestechung',liber:'frei',libido:'Begierde',lingua:'Zunge',lubido:'Begierde',luxuria:'Verschwendungssucht',magis:'mehr',magna:'groß',magnae:'groß',magni:'groß',malo:'schlecht',maxume:'am meisten, besonders',maxumus:'der größte',memorabile:'denkwürdig',memoria:'Erinnerung',memoriam:'Erinnerung',mercari:'kaufen',metu:'Furcht',mihi:'mir',miseriaeque:'und zum Elend',mores:'Sitten',multa:'vieles',multis:'(mit) vielen',natus:'geboren, stammend',nobili:'adlig',nostri:'an uns',novitate:'Neuheit (Abl.)',obnoxios:'abhängig, ergeben',officiis:'Tätigkeiten, Pflichten',omnia:'alles',oneri:'zur Last',opibus:'(mit) Mitteln, Kräften',optumus:'der beste',otium:'Ruhe, Muße',parandae:'zu erwerben(d)',pararet:'er verschaffte (Konj.)',paravit:'er verschaffte',partibus:'Parteien, Parteiinteressen',parum:'zu wenig',pauca:'weniges',paulatim:'allmählich',pectore:'Brust, Herz',pecuniae:'(nach) Geld',periculi:'der Gefahr',periit:'ging zugrunde',pessuma:'die schlechteste',pestilentia:'Seuche, Pest',populi:'des Volkes',potentiae:'Macht',potentiam:'Macht',potero:'ich werde können',praebere:'verschaffte (hist. Inf.)',pravoque:'und verkehrt',primo:'zuerst',pro:'anstelle von, für',probitas:'Rechtschaffenheit',profusus:'verschwenderisch',promptum:'offen, bereit',publica:'öffentlich',publicae:'öffentlich',pudore:'Scham',qua:'den / das (Relativpronomen)',quae:'dies (rel. Satzanschluss)',quaerere:'suchen',quam:'als / wie / möglichst',quasi:'gleichsam, wie',qui:'der, welcher',quis:'jemand / wer?',quisque:'jeder',quoius:'wessen, dessen',quoiusque:'eines jeden',quom:'als, weil / mit',rapinae:'Raubzüge',rectius:'richtiger',reges:'Könige',regni:'der Königsherrschaft',regnum:'Königsherrschaft',rei:'Sache (res publica = Staat)',res:'Sache, Ding',romani:'römisch',saevire:'wüten',sapientiae:'(an) Weisheit',satis:'genug',sceleris:'des Verbrechens',scelerum:'der Verbrechen',scorta:'Dirnen',sed:'aber',servilibus:'sklavisch',si:'wenn',sibi:'sich',simulator:'Heuchler (täuscht vor)',spe:'Hoffnung (Abl.)',spes:'Hoffnung',spoliandi:'des Plünderns',stipatorum:'der Leibwächter',stirpe:'Wurzel, Stamm',strenuissumus:'der tapferste',studium:'Eifer, Neigung',subdolus:'hinterlistig',subvortit:'stürzte um, zerstörte',sui:'(mit) Eigenem',sulla:'Sulla',sum:'ich bin',sunt:'sind',suom:'sein',tametsi:'obwohl',tamquam:'wie, gleichsam',tenebatur:'wurde festgehalten',urbe:'Stadt (Abl.)',usu:'durch Umgang',ut:'wie / dass, damit, sodass',varius:'wankelmütig, vielseitig',venalia:'käuflich',venando:'durch Jagen',verissume:'sehr wahrheitsgetreu',vi:'(mit) Kraft, Gewalt',videtur:'scheint',vigiliae:'der Nachtwache',virium:'der Körperkräfte',virtus:'Tugend, Tüchtigkeit',virtute:'Tugend',visundi:'des Schauens',vita:'Leben',volt:'er will',voltum:'Miene, Gesicht',voltus:'Miene, Gesicht'};
+const P={
+'Caesar bellis gerendis potentiam paravit':'Caesar verschaffte sich Macht durch das Führen von Kriegen',
+'Caesar potentiam multis artibus auxit':'Caesar vergrößerte seine Macht mit vielen Mitteln',
+'Caesari fuit cupiditas regni':'Caesar hatte die Begierde nach der Königsherrschaft',
+'Caesari fuit libido magnae potentiae parandae':'Caesar hatte die Begierde, große Macht zu erwerben',
+'Caesari fuit satis pecuniae':'Caesar hatte genug Geld',
+'Carthago ab stirpe interiit':'Karthago ging von Grund auf unter',
+'pecuniae, deinde imperi cupido':'(zuerst) die Gier nach Geld, dann nach Macht',
+'contagio quasi pestilentia':'die Ansteckung wie eine Seuche',
+'Catilina fuit magna vi animi':'Catilina war von großer Geisteskraft',
+'Catilina, nobili genere natus':'Catilina, aus adliger Familie stammend',
+'Quae tametsi animus aspernabatur':'Obwohl mein Geist dies zurückwies',
+'Quae tametsi':'Obwohl … dies',
+'Sulla dominante':'während Sulla herrschte',
+'Sulla dominante res publica periit':'Während Sulla herrschte, ging der Staat zugrunde',
+'Urbe capta hostes discesserunt':'Nachdem die Stadt erobert war, zogen die Feinde ab',
+'a spe, metu, partibus liber':'frei von Hoffnung, Furcht und Parteiinteressen',
+'ab stirpe':'von Grund auf',
+'adulescentium familiaritates adpetebat':'er suchte die Freundschaft junger Männer',
+'agrum colundo':'durch Ackerbau',
+'agrum colundo aut venando':'durch Ackerbau oder Jagen',
+'alieni adpetens, sui profusus':'gierig nach Fremdem, verschwenderisch mit Eigenem',
+'aliis scorta praebere':'den einen verschaffte er Dirnen',
+'aliis scorta praebere, aliis canes mercari':'den einen verschaffte er Dirnen, den anderen kaufte er Hunde',
+'aliis aliis':'den einen … den anderen',
+'aliud clausum in pectore, aliud in lingua promptum':'das eine im Herzen verschlossen, das andere offen auf der Zunge',
+'ambitione corrupta':'durch Ehrgeiz verdorben',
+'amicitia, familiaritas, fidus':'Freundschaft, Vertrautheit, treu',
+'animus ambitione corruptus':'der durch Ehrgeiz verdorbene Geist',
+'animus ambitione corruptus tenebatur':'der durch Ehrgeiz verdorbene Geist wurde festgehalten',
+'audacia, largitio, avaritia':'Frechheit, Bestechung, Habgier',
+'servilibus officiis':'mit sklavischen Tätigkeiten',
+'sceleris atque periculi novitate':'wegen der Neuheit des Verbrechens und der Gefahr',
+'audax, subdolus, varius simulator ac dissimulator':'kühn, hinterlistig, wankelmütig … ein Meister im Vortäuschen und Verbergen',
+'bella intestina, caedes, rapinae':'Bürgerkriege, Morde, Raubzüge',
+'bella intestina, caedes, rapinae, discordia civilis':'Bürgerkriege, Morde, Raubzüge, Zwietracht unter Bürgern',
+'conscientia scelerum':'das Bewusstsein der Verbrechen',
+'divitiarum et formae gloria fluxa atque fragilis est, virtus clara aeternaque habetur':'Der Ruhm von Reichtum und Schönheit ist vergänglich und zerbrechlich, die Tugend gilt als glänzend und ewig',
+'dum sibi regnum pararet':'wenn er sich nur die Königsherrschaft verschaffte',
+'eo magis':'umso mehr',
+'flagitiorum atque facinorum':'von Schandtaten und Verbrechen',
+'flagitiorum atque facinorum catervas':'Scharen von Lotterbuben und Verbrechern',
+'haud difficulter':'ohne Mühe, ganz leicht',
+'ut quoiusque studium ex aetate flagrabat':'je nachdem, wofür jeder in seinem Alter brannte',
+'flagitium, facinus, culpa':'Schandtat, Untat, Schuld',
+'fluxa atque fragilis':'vergänglich und zerbrechlich',
+'fortuna saevire coepit':'das Schicksal begann zu wüten',
+'gloria formae':'der Ruhm der Schönheit',
+'haec primo paulatim crescere':'dies wuchs zuerst allmählich',
+'id facinus esse memorabile':'dass diese Tat denkwürdig ist',
+'id facinus memorabile existumo':'ich halte diese Tat für denkwürdig',
+'id facinus memorabile existumo esse':'ich halte diese Tat für denkwürdig',
+'inediae, algoris, vigiliae':'Hunger, Kälte, Nachtwachen',
+'ingeni quam virium opibus':'mit den Mitteln des Geistes statt der Körperkraft',
+'virtus clara aeternaque':'die Tugend, glänzend und ewig',
+'dicta exaequanda factis':'die Worte müssen den Taten gleichkommen',
+'ingenio malo pravoque':'von schlechtem und verkehrtem Charakter',
+'simulator ac dissimulator':'einer, der vortäuscht und verheimlicht',
+'satis eloquentiae, sapientiae parum':'genug Redegewandtheit, zu wenig Weisheit',
+'luxuria atque avaritia':'Verschwendungssucht und Habgier',
+'labore atque iustitia':'durch Arbeit und Gerechtigkeit',
+'labore atque iustitia res publica crevit':'durch Arbeit und Gerechtigkeit wuchs der Staat',
+'lubido rei publicae capiundae':'die Begierde, den Staat an sich zu reißen',
+'magna vi animi':'von großer Geisteskraft',
+'magna vi et animi et corporis, sed ingenio malo':'von großer Kraft des Geistes und des Körpers, aber von schlechtem Charakter',
+'memoria nostri':'die Erinnerung an uns',
+'memoriam nostri':'die Erinnerung an uns',
+'mihi multa advorsa fuere':'ich hatte viel Widriges (erlebt)',
+'mihi rectius videtur gloriam quaerere':'es scheint mir richtiger, Ruhm zu suchen',
+'mihi rectius videtur quaerere':'es scheint mir richtiger, … zu suchen',
+'mihi habendam':'von mir zu führen',
+'mores corrupti':'die verdorbenen Sitten',
+'nobili genere natus':'aus adliger Familie stammend',
+'obnoxios fidosque':'abhängig und treu',
+'omnia venalia habere':'alles für käuflich halten',
+'oneri miseriaeque fuere':'wurden zur Last und zum Elend',
+'otium divitiaeque oneri fuere':'Ruhe und Reichtum wurden (ihnen) zur Last',
+'otium divitiaeque oneri miseriaeque fuere':'Ruhe und Reichtum wurden (ihnen) zur Last und zum Elend',
+'pauca explananda sunt':'weniges muss erklärt werden',
+'pecuniae cupido':'die Gier nach Geld',
+'pro pudore, pro abstinentia, pro virtute':'statt Scham, statt Enthaltsamkeit, statt Tugend',
+'quam verissume':'möglichst wahrheitsgetreu',
+'quam verissume potero':'so wahrheitsgetreu, wie ich nur kann',
+'quoius, quoiusque, quom':'wessen, eines jeden, als/weil',
+'reges magni bello domiti':'große Könige, im Krieg bezwungen',
+'res gestae populi Romani':'die Taten des römischen Volkes',
+'sapientiae parum':'zu wenig Weisheit',
+'satis eloquentiae':'genug Redegewandtheit',
+'si aliquis':'wenn (irgend)jemand',
+'si quis':'wenn (irgend)jemand',
+'spes gloriae':'die Hoffnung auf Ruhm',
+'strenuissumus quisque':'gerade die Tapfersten',
+'strenuissumus quisque ceciderat':'gerade die Tapfersten waren gefallen',
+'tamquam stipatorum':'wie von Leibwächtern',
+'tamquam stipatorum catervas':'Scharen wie von Leibwächtern',
+'usu atque inlecebris':'durch Umgang und Verlockungen',
+'visundi aut spoliandi gratia':'um zu schauen oder zu plündern',
+'visundi gratia':'um zu schauen',
+'vita, qua fruimur':'das Leben, das wir genießen',
+'lubido, maxumus, optumus, existumo':'Begierde, der größte, der beste, ich halte für',
+'conrupta, adpetens, inlecebris, inmutata':'verdorben, gierig nach, Verlockungen, verändert',
+'divorsus, advorsus, subvortit':'verschieden, entgegengesetzt, zerstörte',
+'capiundae, colundo':'zu ergreifen, durch Bebauen',
+'ingeni, imperi':'des Geistes, der Herrschaft',
+'volt, voltus, suom':'er will, Miene, sein'};
+const nk=s=>s.toLowerCase().replace(/[^a-zāēīōū ]+/g,' ').replace(/\s+/g,' ').trim();
+const PN={};for(const k in P)PN[nk(k)]=P[k];
+function wrapLat(root){root.querySelectorAll('.lat').forEach(el=>{if(el.dataset.w)return;el.dataset.w=1;
+  if(!el.querySelector('*')&&el.textContent.includes('·'))el.innerHTML=el.textContent.split('·').map(x=>`<span class="seg">${x.trim()}</span>`).join(' · ');
+  const segs=el.querySelectorAll('.seg').length?[...el.querySelectorAll('.seg')]:[el];
+  segs.forEach(sg=>{sg.dataset.p=sg.textContent;const tw=document.createTreeWalker(sg,NodeFilter.SHOW_TEXT);const nodes=[];while(tw.nextNode())nodes.push(tw.currentNode);
+    nodes.forEach(n=>{const parts=n.textContent.split(/([A-Za-zāēīōū]+)/);if(parts.length<2)return;const f=document.createDocumentFragment();parts.forEach((p,i)=>{if(i%2){const s=document.createElement('span');s.className='lw';s.textContent=p;f.appendChild(s)}else if(p)f.appendChild(document.createTextNode(p))});n.replaceWith(f)})})})}
+const tip=document.createElement('div');tip.id='tip';document.body.appendChild(tip);let tipOn=null;
+function hideTip(){tip.style.display='none';if(tipOn)tipOn.classList.remove('on');tipOn=null}
+document.addEventListener('click',e=>{const w=e.target.closest('.lw');if(!w){if(!e.target.closest('#tip'))hideTip();return}
+  e.stopPropagation();e.preventDefault();if(tipOn===w){hideTip();return}hideTip();tipOn=w;w.classList.add('on');
+  const word=w.textContent,g=W[word.toLowerCase()];const holder=w.closest('[data-p]');const key=holder?nk(holder.dataset.p):'';const ph=PN[key];
+  let h=`<div class="tw"><b>${word}</b> = ${g||'<i>(Eigenname / keine Angabe)</i>'}</div>`;if(ph&&key!==word.toLowerCase())h+=`<div class="tp">👉 ${ph}</div>`;
+  tip.innerHTML=h;tip.style.display='block';const r=w.getBoundingClientRect(),tr=tip.getBoundingClientRect();
+  let left=r.left+r.width/2-tr.width/2;left=Math.max(8,Math.min(left,innerWidth-tr.width-8));let top=r.top-tr.height-10,below=false;if(top<6){top=r.bottom+10;below=true}
+  tip.style.left=(left+scrollX)+'px';tip.style.top=(top+scrollY)+'px';tip.classList.toggle('below',below);tip.style.setProperty('--ax',(r.left+r.width/2-left)+'px')},true);
+addEventListener('scroll',hideTip,{passive:true});addEventListener('resize',hideTip);
+
+wrapLat(document);hideTip();
 renderDone();hud();
 </script>
 </body>
