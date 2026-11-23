@@ -84,10 +84,19 @@ input.ans{width:100%;font-size:1.1rem;padding:11px;border-radius:12px;border:2px
   <div class="tabs">
     <button id="tLearn" class="on" onclick="mode('learn')">📖 Lehrmodus</button>
     <button id="tQuiz" onclick="mode('quiz')">🎮 Quiz-Modus</button>
+    <button onclick="syncToggle()" title="Fortschritt zwischen Geräten übertragen">🔄</button>
   </div>
 </header>
 
 <main>
+<div id="sync" class="qcard hidden" style="margin-bottom:12px">
+  <h3 style="margin:0 0 6px">🔄 Fortschritt zwischen Geräten übertragen</h3>
+  <p class="small" style="margin:0 0 8px"><b>Gerät A</b> (z. B. iPad): „Code teilen“ oder „Code kopieren“ und an dich selbst schicken (AirDrop, WhatsApp, Notizen …).<br><b>Gerät B</b> (z. B. Handy): Code unten einfügen → „Code laden“. Beide Stände werden <b>zusammengeführt</b>, es geht nichts verloren.</p>
+  <div class="row" style="margin-top:0"><button class="btn" onclick="syncShare()">📤 Code teilen</button><button class="btn alt" onclick="syncCopy()">📋 Code kopieren</button></div>
+  <textarea id="syncIn" placeholder="Code hier einfügen …" style="width:100%;height:70px;margin-top:10px;border-radius:12px;border:2px solid #e5def9;padding:8px;font-size:.85rem"></textarea>
+  <div class="row"><button class="btn ok" onclick="syncLoad()">📥 Code laden</button><button class="btn alt" onclick="syncToggle()">Schließen</button></div>
+  <div id="syncMsg" class="small" style="margin-top:6px"></div>
+</div>
 <!-- ===================== LEHRMODUS ===================== -->
 <section id="learn">
   <div class="small">Dein Fortschritt: <span id="pTxt">0/8</span> Kapitel gelernt</div>
@@ -392,6 +401,18 @@ archCards.innerHTML=ARCH.slice(0,12).map(([s,k,r])=>`<div class="fc" onclick="th
 const cv=document.getElementById('confetti'),cx=cv.getContext('2d');let parts=[];
 function confetti(n){cv.width=innerWidth;cv.height=innerHeight;for(let i=0;i<n;i++)parts.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.3,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,s:5+Math.random()*6,c:pick(['#6d4fd6','#e8749a','#f2b705','#2e9e5b','#4a73e8']),r:Math.random()*6});if(parts.length===n)loop()}
 function loop(){cx.clearRect(0,0,cv.width,cv.height);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=.1;cx.fillStyle=p.c;cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);cx.restore()});parts=parts.filter(p=>p.y<cv.height+20);if(parts.length)requestAnimationFrame(loop);else cx.clearRect(0,0,cv.width,cv.height)}
+
+// ---------- Sync (Export / Import) ----------
+function syncToggle(){const p=document.getElementById('sync');p.classList.toggle('hidden');syncMsg.textContent='';if(!p.classList.contains('hidden'))window.scrollTo({top:0,behavior:'smooth'})}
+function syncCode(){const data={v:1,done:store.get('done',[]),xp:store.get('xp',0),best:store.get('best',0),mist:store.get('mist',[])};return 'SALLUST-'+btoa(unescape(encodeURIComponent(JSON.stringify(data))))}
+async function syncShare(){const c=syncCode();if(navigator.share){try{await navigator.share({title:'Sallust Fortschritt',text:c});syncMsg.textContent='✅ Geteilt!';return}catch(e){if(e.name==='AbortError')return}}syncCopy()}
+async function syncCopy(){const c=syncCode();try{await navigator.clipboard.writeText(c);syncMsg.textContent='✅ Code kopiert! Jetzt an dich selbst schicken.'}catch(e){syncIn.value=c;syncIn.select();syncMsg.textContent='Kopieren ging nicht automatisch. Code steht im Feld: markieren + kopieren.'}}
+function syncLoad(){let raw=syncIn.value.trim().replace(/\s+/g,'');if(!raw){syncMsg.textContent='⚠️ Erst einen Code einfügen.';return}raw=raw.replace(/^SALLUST-/,'');let d;try{d=JSON.parse(decodeURIComponent(escape(atob(raw))))}catch(e){syncMsg.textContent='❌ Der Code ist ungültig oder unvollständig. Nochmal komplett kopieren.';return}
+  done=[...new Set([...store.get('done',[]),...(d.done||[])])];store.set('done',done);
+  xp=Math.max(store.get('xp',0),d.xp||0);store.set('xp',xp);
+  best=Math.max(store.get('best',0),d.best||0);store.set('best',best);
+  const m=store.get('mist',[]);(d.mist||[]).forEach(q=>{if(!m.some(x=>x.text===q.text))m.push(q)});store.set('mist',m);
+  renderDone();hud();syncIn.value='';syncMsg.textContent=`✅ Geladen! ${done.length} Kapitel, ${xp} XP, ${m.length} Fehler-Fragen.`;confetti(80)}
 
 renderDone();hud();
 </script>
